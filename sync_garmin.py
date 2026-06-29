@@ -64,7 +64,11 @@ except Exception as e:
     resumen += f"• No disponible: {e}\n"
 
 resumen += f"\n💬 Copia este mensaje y pegalo a Claude para consejos de entrenamiento"
-
+if telegram_token and telegram_chat_id:
+    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    response = requests.post(url, json={"chat_id": telegram_chat_id, "text": resumen})
+    print(f"Telegram status: {response.status_code}")
+    print(f"Telegram response: {response.text}")
 print(resumen)
 
 if telegram_token and telegram_chat_id:
