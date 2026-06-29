@@ -1,4 +1,5 @@
 import os
+import json
 import garminconnect
 from datetime import date
 
@@ -13,24 +14,40 @@ client = garminconnect.Garmin(email, password)
 client.login()
 
 today = date.today()
-print(f"Datos de hoy: {today}")
-
-try:
-    steps = client.get_steps_data(today.isoformat())
-    print(f"Pasos: {steps}")
-except Exception as e:
-    print(f"Pasos no disponible: {e}")
+resumen = f"# Garmin {today}\n"
 
 try:
     hr = client.get_resting_heart_rate(today.isoformat())
-    print(f"FC reposo: {hr}")
+    resumen += f"- FC reposo: {hr.get('restingHeartRate', 'N/A')} ppm\n"
 except Exception as e:
-    print(f"FC no disponible: {e}")
+    resumen += f"- FC reposo: no disponible\n"
 
 try:
     sleep = client.get_sleep_data(today.isoformat())
-    print(f"Sueno: {sleep}")
+    duracion = sleep.get('dailySleepDTO', {}).get('sleepTimeSeconds', 0) // 3600
+    puntuacion = sleep.get('dailySleepDTO', {}).get('sleepScores', {}).get('overall', {}).get('value', 'N/A')
+    resumen += f"- Sueno: {duracion}h (puntuacion {puntuacion})\n"
 except Exception as e:
-    print(f"Sueno no disponible: {e}")
+    resumen += f"- Sueno: no disponible\n"
 
-print("Sync completado.")
+try:
+    hrv = client.get_hrv_data(today.isoformat())
+    hrv_val = hrv.get('hrvSummary', {}).get('lastNight', 'N/A')
+    resumen += f"- VFC: {hrv_val} ms\n"
+except Exception as e:
+    resumen += f"- VFC: no disponible\n"
+
+try:
+    steps = client.get_steps_data(today.isoformat())
+    total = sum(s.get('steps', 0) for s in steps) if steps else 0
+    resumen += f"- Pasos: {total}\n"
+except Exception as e:
+    resumen += f"- Pasos: no disponible\n"
+
+os.makedirs("garmin/daily", exist_ok=True)
+filename = f"garmin/daily/{today}.md"
+with open(filename, "w") as f:
+    f.write(resumen)
+
+print(resumen)
+print(f"Guardado en {filename}")
